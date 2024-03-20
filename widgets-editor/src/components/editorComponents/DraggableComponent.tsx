@@ -1,9 +1,9 @@
-import React, { CSSProperties } from "react";
+import React, { CSSProperties, useCallback } from "react";
 import styled from "styled-components";
 import { WidgetProps } from "widgets/BaseWidget";
 import { useDrag, DragSourceMonitor } from "react-dnd";
 import { WIDGET_PADDING } from "constants/WidgetConstants";
-import { useSelector } from "react-redux";
+import { useSelector, useStore } from "react-redux";
 import { AppState } from "reducers";
 import { getColorWithOpacity } from "constants/DefaultTheme";
 import {
@@ -39,6 +39,8 @@ type DraggableComponentProps = WidgetProps;
 /* eslint-disable react/display-name */
 
 const DraggableComponent = (props: DraggableComponentProps) => {
+  const store = useStore<AppState>();
+
   // Dispatch hook handy to toggle property pane
   const showPropertyPane = useShowPropertyPane();
 
@@ -57,9 +59,9 @@ const DraggableComponent = (props: DraggableComponentProps) => {
 
   // This state tels us which widget is focused
   // The value is the widgetId of the focused widget.
-  const focusedWidget = useSelector(
-    (state: AppState) => state.ui.widgetDragResize.focusedWidget,
-  );
+  // const focusedWidget = useSelector(
+  //   (state: AppState) => state.ui.widgetDragResize.focusedWidget,
+  // );
 
   // This state tells us whether a `ResizableComponent` is resizing
   const isResizing = useSelector(
@@ -74,56 +76,84 @@ const DraggableComponent = (props: DraggableComponentProps) => {
   // This state tells us to disable dragging,
   // This is usually true when widgets themselves implement drag/drop
   // This flag resolves conflicting drag/drop triggers.
-  const isDraggingDisabled: boolean = useSelector(
-    (state: AppState) => state.ui.widgetDragResize.isDraggingDisabled,
+  // const isDraggingDisabled: boolean = useSelector(
+  //   (state: AppState) => state.ui.widgetDragResize.isDraggingDisabled,
+  // );
+
+  const [{ isCurrentWidgetDragging }, drag] = useDrag(
+    {
+      ...props,
+      collect: useCallback(
+        (monitor: DragSourceMonitor) => ({
+          isCurrentWidgetDragging: monitor.isDragging(),
+        }),
+        [],
+      ),
+      item: useCallback(() => {
+        const state = store.getState();
+        const selectedWidget = state.ui.widgetDragResize.selectedWidget;
+
+        // When this draggable starts dragging
+
+        // Make sure that this widget is selected
+        selectWidget &&
+          selectedWidget !== props.widgetId &&
+          selectWidget(props.widgetId);
+
+        // Tell the rest of the application that a widget has started dragging
+        setIsDragging && setIsDragging(true);
+
+        AnalyticsUtil.logEvent("WIDGET_DRAG", {
+          widgetName: props.widgetName,
+          widgetType: props.type,
+        });
+
+        return props;
+      }, [
+        selectWidget,
+        setIsDragging,
+        props.widgetId,
+        props.type,
+        props.widgetName,
+      ]),
+      end: useCallback(
+        (widget, monitor) => {
+          // When this draggable is dropped, we try to open the propertypane
+          // We pass the second parameter to make sure the previous toggle state (open/close)
+          // of the property pane is taken into account.
+          // See utils/hooks/dragResizeHooks.tsx
+          const didDrop = monitor.didDrop();
+          if (didDrop) {
+            showPropertyPane &&
+              showPropertyPane(props.widgetId, undefined, true);
+          }
+          // Take this to the bottom of the stack. So that it runs last.
+          // We do this because, we don't want erroraneous mouse clicks to propagate.
+          setTimeout(() => setIsDragging && setIsDragging(false), 0);
+          AnalyticsUtil.logEvent("WIDGET_DROP", {
+            widgetName: props.widgetName,
+            widgetType: props.type,
+            didDrop: didDrop,
+          });
+        },
+        [
+          showPropertyPane,
+          setIsDragging,
+          props.widgetId,
+          props.type,
+          props.widgetName,
+        ],
+      ),
+      canDrag: useCallback(() => {
+        const state = store.getState();
+        const isResizing = state.ui.widgetDragResize.isResizing;
+        const isDraggingDisabled = state.ui.widgetDragResize.isDraggingDisabled;
+        // Dont' allow drag if we're resizing or the drag of `DraggableComponent` is disabled
+        return !isResizing && !isDraggingDisabled;
+      }, []),
+    },
+    [],
   );
-
-  const [{ isCurrentWidgetDragging }, drag] = useDrag({
-    ...props,
-    collect: (monitor: DragSourceMonitor) => ({
-      isCurrentWidgetDragging: monitor.isDragging(),
-    }),
-    item: () => {
-      // When this draggable starts dragging
-
-      // Make sure that this widget is selected
-      selectWidget &&
-        selectedWidget !== props.widgetId &&
-        selectWidget(props.widgetId);
-
-      // Tell the rest of the application that a widget has started dragging
-      setIsDragging && setIsDragging(true);
-
-      AnalyticsUtil.logEvent("WIDGET_DRAG", {
-        widgetName: props.widgetName,
-        widgetType: props.type,
-      });
-
-      return props;
-    },
-    end: (widget, monitor) => {
-      // When this draggable is dropped, we try to open the propertypane
-      // We pass the second parameter to make sure the previous toggle state (open/close)
-      // of the property pane is taken into account.
-      // See utils/hooks/dragResizeHooks.tsx
-      const didDrop = monitor.didDrop();
-      if (didDrop) {
-        showPropertyPane && showPropertyPane(props.widgetId, undefined, true);
-      }
-      // Take this to the bottom of the stack. So that it runs last.
-      // We do this because, we don't want erroraneous mouse clicks to propagate.
-      setTimeout(() => setIsDragging && setIsDragging(false), 0);
-      AnalyticsUtil.logEvent("WIDGET_DROP", {
-        widgetName: props.widgetName,
-        widgetType: props.type,
-        didDrop: didDrop,
-      });
-    },
-    canDrag: () => {
-      // Dont' allow drag if we're resizing or the drag of `DraggableComponent` is disabled
-      return !isResizing && !isDraggingDisabled;
-    },
-  });
 
   // True when any widget is dragging or resizing, including this one
   const isResizingOrDragging = !!isResizing || !!isDragging;
@@ -139,13 +169,17 @@ const DraggableComponent = (props: DraggableComponentProps) => {
   };
 
   // When mouse is over this draggable
-  const handleMouseOver = (e: any) => {
-    focusWidget &&
-      !isResizingOrDragging &&
-      focusedWidget !== props.widgetId &&
-      focusWidget(props.widgetId);
-    e.stopPropagation();
-  };
+  const handleMouseOver = useCallback(
+    (e: any) => {
+      const focusedWidget = store.getState().ui.widgetDragResize.focusedWidget;
+      focusWidget &&
+        !isResizingOrDragging &&
+        focusedWidget !== props.widgetId &&
+        focusWidget(props.widgetId);
+      e.stopPropagation();
+    },
+    [focusWidget, isResizingOrDragging, props.widgetId],
+  );
 
   // Display this draggable based on the current drag state
   const style: CSSProperties = {

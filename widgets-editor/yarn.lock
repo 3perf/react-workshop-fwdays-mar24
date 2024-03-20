@@ -11359,10 +11359,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"proxy-compare@npm:2.6.0":
+  version: 2.6.0
+  resolution: "proxy-compare@npm:2.6.0"
+  checksum: 244dc49b45749ebf9dd2c6890e600c16a7d7432a8f535be9dc72db616469685bb5db4bbdb61f211b14c59034b601508f826007715df441d6e3f089b880e265d8
+  languageName: node
+  linkType: hard
+
 "proxy-from-env@npm:^1.1.0":
   version: 1.1.0
   resolution: "proxy-from-env@npm:1.1.0"
   checksum: ed7fcc2ba0a33404958e34d95d18638249a68c430e30fcb6c478497d72739ba64ce9810a24f53a7d921d0c065e5b78e3822759800698167256b04659366ca4d4
+  languageName: node
+  linkType: hard
+
+"proxy-memoize@npm:^2.0.5":
+  version: 2.0.5
+  resolution: "proxy-memoize@npm:2.0.5"
+  dependencies:
+    proxy-compare: 2.6.0
+  checksum: 5f967740c62fa355f1ec050cec64550560f7b05a7e43b02cb8f3627c938e516aa5d8d9116d0bd5c150e42252574a8d5dd9971063a67c8c5ca139499ece7cc5f9
   languageName: node
   linkType: hard
 
@@ -14806,6 +14822,7 @@ __metadata:
     prettier: ^1.19.1
     prismjs: ^1.29.0
     prompts: 2.4.2
+    proxy-memoize: ^2.0.5
     raw-loader: ^4.0.2
     re-reselect: ^3.4.0
     react: ^18.2.0

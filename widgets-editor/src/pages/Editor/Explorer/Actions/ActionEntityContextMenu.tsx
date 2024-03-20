@@ -1,6 +1,7 @@
 import React, { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import TreeDropdown from "pages/Editor/Explorer/TreeDropdown";
+import { memoize } from "proxy-memoize";
 
 import { AppState } from "reducers";
 import ContextMenuTrigger from "../ContextMenuTrigger";
@@ -15,6 +16,14 @@ import { initExplorerEntityNameEdit } from "actions/explorerActions";
 import { ContextMenuPopoverModifiers } from "../helpers";
 import { noop } from "lodash";
 import { useNewActionName } from "./helpers";
+
+const pageListSelector = memoize((state: AppState) => {
+  return state.entities.pageList.pages.map((page) => ({
+    label: page.pageName,
+    id: page.pageId,
+    value: page.pageName,
+  }));
+});
 
 type EntityContextMenuProps = {
   id: string;
@@ -55,13 +64,7 @@ export const ActionEntityContextMenu = (props: EntityContextMenuProps) => {
     [dispatch],
   );
 
-  const menuPages = useSelector((state: AppState) => {
-    return state.entities.pageList.pages.map((page) => ({
-      label: page.pageName,
-      id: page.pageId,
-      value: page.pageName,
-    }));
-  });
+  const menuPages = useSelector(pageListSelector);
 
   const editActionName = useCallback(
     () => dispatch(initExplorerEntityNameEdit(props.id)),

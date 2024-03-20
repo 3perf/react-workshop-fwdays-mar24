@@ -5,7 +5,7 @@ import React, {
   useEffect,
   forwardRef,
 } from "react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector, useDispatch, useStore } from "react-redux";
 import styled from "styled-components";
 import EditableText, {
   EditInteractionKind,
@@ -71,6 +71,7 @@ export interface EntityNameProps {
 
 export const EntityName = forwardRef(
   (props: EntityNameProps, ref: React.Ref<HTMLDivElement>) => {
+    const store = useStore<AppState>();
     const { name, updateEntityName, searchKeyword } = props;
     const tabs:
       | Array<{ id: string; widgetId: string; label: string }>
@@ -100,22 +101,7 @@ export const EntityName = forwardRef(
       setUpdatedName(name);
     }, [name, nameUpdateError]);
 
-    const existingPageNames: string[] = useSelector((state: AppState) =>
-      state.entities.pageList.pages.map((page: Page) => page.pageName),
-    );
-
-    const existingWidgetNames: string[] = useSelector((state: AppState) =>
-      Object.values(state.entities.canvasWidgets).map(
-        (widget) => widget.widgetName,
-      ),
-    );
     const dispatch = useDispatch();
-
-    const existingActionNames: string[] = useSelector((state: AppState) =>
-      state.entities.actions.map(
-        (action: { config: { name: string } }) => action.config.name,
-      ),
-    );
 
     const hasNameConflict = useCallback(
       (
@@ -123,6 +109,18 @@ export const EntityName = forwardRef(
         tabs?: Array<{ id: string; widgetId: string; label: string }>,
       ) => {
         if (tabs === undefined) {
+          const state = store.getState();
+          const existingPageNames: string[] = state.entities.pageList.pages.map(
+            (page: Page) => page.pageName,
+          );
+
+          const existingWidgetNames: string[] = Object.values(
+            state.entities.canvasWidgets,
+          ).map((widget) => widget.widgetName);
+
+          const existingActionNames: string[] = state.entities.actions.map(
+            (action: { config: { name: string } }) => action.config.name,
+          );
           return !(
             existingPageNames.indexOf(newName) === -1 &&
             existingActionNames.indexOf(newName) === -1 &&
@@ -132,7 +130,7 @@ export const EntityName = forwardRef(
           return tabs.findIndex((tab) => tab.label === newName) > -1;
         }
       },
-      [existingPageNames, existingActionNames, existingWidgetNames],
+      [],
     );
 
     const isInvalidName = useCallback(
