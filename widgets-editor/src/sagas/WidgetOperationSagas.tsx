@@ -1514,6 +1514,8 @@ function* addTableWidgetFromQuerySaga(action: ReduxAction<string>) {
   }
 }
 
+const emptyArr = [];
+
 // The following is computed to be used in the entity explorer
 // Every time a widget is selected, we need to expand widget entities
 // in the entity explorer so that the selected widget is visible
@@ -1522,7 +1524,7 @@ function* selectedWidgetAncestrySaga(
 ) {
   try {
     const canvasWidgets = yield select(getWidgets);
-    const widgetIdsExpandList = [];
+    const widgetIdsExpandList = emptyArr;
     const selectedWidget = action.payload.widgetId;
 
     // Make sure that the selected widget exists in canvasWidgets
